@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "spine/log.h"
+#include "spine/util/log.h"
 
 typedef struct {
     char* output_file;
@@ -106,6 +106,69 @@ int main(int argc, char* argv[]) {
 
     // parses for flags
     parseFlags(argc, argv, &options);
+
+    // opens input file
+    FILE* inputFile = fopen(options.input_file, "r");
+    if (inputFile == NULL) {
+        spLogInfo l;
+        l.code = SP_MAIN_CANNOT_OPEN_INPUT_FILE;
+        l.col = 0;
+        l.line = 0;
+        l.file = options.input_file;
+        l.title = "Cannot open file";
+        l.desc = "Unable to open input file (%s) provided.";
+        l.hint = "Make sure you are providing the correct filename using the -i flag.";
+        l.sev = SP_SEV_FATAL;
+        spEmitLog(l, options.input_file);
+    }
+
+    // gets input file size
+    fseek(inputFile, 0, SEEK_END);
+    long inputSize = ftell(inputFile);
+    rewind(inputFile);
+
+    // allocates memory for input
+    char* input = malloc(inputSize + 1);
+    if (input == NULL) {
+        fclose(inputFile);
+        spLogInfo l;
+        l.code = SP_MAIN_CANNOT_MALLOC_INPUT_BUFFER;
+        l.col = 0;
+        l.line = 0;
+        l.file = options.input_file;
+        l.title = "Memory allocation failed";
+        l.desc = "Read buffer memory allocation failed.";
+        l.hint = "Make sure you have enough memory and try again.";
+        l.sev = SP_SEV_FATAL;
+        spEmitLog(l);
+    }
+
+    // compile steps & input buffer free here
+
+    char* output = "";
+
+    // opens output file
+    FILE* outputFile = fopen(options.output_file, "w");
+    if (outputFile == NULL) {
+        spLogInfo l;
+        l.code = SP_MAIN_CANNOT_OPEN_OUTPUT_FILE;
+        l.col = 0;
+        l.line = 0;
+        l.file = options.output_file;
+        l.title = "Cannot open file";
+        l.desc = "Unable to open output file (%s) provided.";
+        l.hint = "Make sure you have enough disk space & write permission and try again.";
+        l.sev = SP_SEV_FATAL;
+        spEmitLog(l, options.output_file);
+    }
+
+    // writes to output file
+    fwrite(output, sizeof(char), strlen(output), outputFile);
+
+    // closes files & free buffers
+    fclose(outputFile);
+    fclose(inputFile);
+    free(input);
 
     return 0;
 }
