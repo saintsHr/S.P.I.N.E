@@ -5,6 +5,7 @@
 
 typedef struct {
     char* output_file;
+    char* input_file;
     int   optimization_level;
     bool  warnings;
 } CompilerOptions;
@@ -12,6 +13,25 @@ typedef struct {
 void parseFlags(int argc, char* argv[], CompilerOptions* options) {
     for (int i = 1; i < argc; i++) {
         bool hasNext = i + 1 < argc;
+
+        // input file
+        if (strcmp(argv[i], "-i") == 0) {
+            if (!hasNext) {
+                spLogInfo l;
+                l.code = SP_MAIN_NO_INPUT_FILE;
+                l.col = 0;
+                l.line = 0;
+                l.file = "N/A";
+                l.title = "No input file";
+                l.desc = "Input file not provided";
+                l.hint = "Choose a input file or remove the '-i' flag";
+                l.sev = SP_SEV_FATAL;
+                spEmitLog(l, argv[i]);
+            }
+            options->output_file = argv[i + 1];
+            i++;
+            continue;
+        }
 
         // output file
         if (strcmp(argv[i], "-o") == 0) {
@@ -23,7 +43,7 @@ void parseFlags(int argc, char* argv[], CompilerOptions* options) {
                 l.file = "N/A";
                 l.title = "No output file";
                 l.desc = "Output file not provided";
-                l.hint = "choose a file to output or remove '-o' flag";
+                l.hint = "Choose a output file or remove the '-o' flag";
                 l.sev = SP_SEV_FATAL;
                 spEmitLog(l, argv[i]);
             }
@@ -70,7 +90,7 @@ void parseFlags(int argc, char* argv[], CompilerOptions* options) {
         l.file = "N/A";
         l.title = "Unknown flag";
         l.desc = "An unknown flag (%s) has been provided.";
-        l.hint = "try using the --help flag or removing this flag.";
+        l.hint = "Try using the --help flag or removing this flag.";
         l.sev = SP_SEV_FATAL;
         spEmitLog(l, argv[i]);
     }
@@ -79,8 +99,9 @@ void parseFlags(int argc, char* argv[], CompilerOptions* options) {
 int main(int argc, char* argv[]) {
     // creates compiler options and fills with defaults
     CompilerOptions options;
-    options.warnings = false;
-    options.output_file = "output";
+    options.warnings           = false;
+    options.input_file         = "input.in";
+    options.output_file        = "output.out";
     options.optimization_level = 0;
 
     // parses for flags

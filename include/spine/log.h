@@ -26,6 +26,8 @@
 
 #define SP_COLOR_RESET "\x1b[0m"
 
+#define SP_INDENT "  "
+
 typedef enum {
     SP_SEV_INFO,
     SP_SEV_WARNING,
@@ -45,11 +47,10 @@ typedef struct {
 } spLogInfo;
 
 typedef enum {
-    SP_MAIN_UNKNOWN_FLAG   = 0x0001,
+    SP_MAIN_NO_INPUT_FILE  = 0x0001,
     SP_MAIN_NO_OUTPUT_FILE = 0x0002,
+    SP_MAIN_UNKNOWN_FLAG   = 0x0003,
 } spErrorCode;
-
-#define SP_INDENT "  "
 
 static void spPrintIndented(const char *text) {
     char buffer[1024];
