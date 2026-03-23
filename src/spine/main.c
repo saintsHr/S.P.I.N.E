@@ -16,7 +16,7 @@ void parseFlags(int argc, char* argv[], CompilerOptions* options) {
 
         // input file
         if (strcmp(argv[i], "-i") == 0) {
-            if (!hasNext) {
+            if (!hasNext || argv[i + 1][0] == '-') {
                 spLogInfo l;
                 l.code = SP_MAIN_NO_INPUT_FILE;
                 l.col = 0;
@@ -28,14 +28,14 @@ void parseFlags(int argc, char* argv[], CompilerOptions* options) {
                 l.sev = SP_SEV_FATAL;
                 spEmitLog(l, argv[i]);
             }
-            options->output_file = argv[i + 1];
+            options->input_file = argv[i + 1];
             i++;
             continue;
         }
 
         // output file
         if (strcmp(argv[i], "-o") == 0) {
-            if (!hasNext) {
+            if (!hasNext || argv[i + 1][0] == '-') {
                 spLogInfo l;
                 l.code = SP_MAIN_NO_OUTPUT_FILE;
                 l.col = 0;
