@@ -10,8 +10,8 @@
 #define STR(x) STR2(x)
 
 typedef struct {
-    char name[MAX_DEFINE_NAME_LENGHT];
-    char value[MAX_DEFINE_VALUE_LENGHT];
+    char name[MAX_DEFINE_NAME_LENGTH];
+    char value[MAX_DEFINE_VALUE_LENGTH];
 } SpDefine;
 
 SpDefine defines[MAX_DEFINES];
@@ -32,15 +32,15 @@ void parseDefine(char *line, const char* filename) {
         return;
     }
 
-    char name[MAX_DEFINE_NAME_LENGHT] = {0};
-    char value[MAX_DEFINE_VALUE_LENGHT] = {0};
+    char name[MAX_DEFINE_NAME_LENGTH] = {0};
+    char value[MAX_DEFINE_VALUE_LENGTH] = {0};
 
     char *p = line + 7;
     while (*p == ' ' || *p == '\t') p++;
 
     char *n = name;
     while (*p && !isspace((unsigned char)*p)) {
-        if ((n - name) < MAX_DEFINE_NAME_LENGHT - 1)
+        if ((n - name) < MAX_DEFINE_NAME_LENGTH - 1)
             *n++ = *p;
         p++;
     }
@@ -48,11 +48,11 @@ void parseDefine(char *line, const char* filename) {
 
     while (*p == ' ' || *p == '\t') p++;
 
-    strncpy(value, p, MAX_DEFINE_VALUE_LENGHT - 1);
-    value[MAX_DEFINE_VALUE_LENGHT - 1] = '\0';
+    strncpy(value, p, MAX_DEFINE_VALUE_LENGTH - 1);
+    value[MAX_DEFINE_VALUE_LENGTH - 1] = '\0';
 
-    strncpy(defines[defineCount].name, name, MAX_DEFINE_NAME_LENGHT);
-    strncpy(defines[defineCount].value, value, MAX_DEFINE_VALUE_LENGHT);
+    strncpy(defines[defineCount].name, name, MAX_DEFINE_NAME_LENGTH);
+    strncpy(defines[defineCount].value, value, MAX_DEFINE_VALUE_LENGTH);
     defineCount++;
 }
 
@@ -79,7 +79,7 @@ char* extractDefines(char *str, const char* filename) {
     while (*read) {
         int i = 0;
 
-        while (*read && *read != '\n' && i < sizeof(line) - 1) {
+        while (*read && *read != '\n' && (unsigned)i < sizeof(line) - 1) {
             line[i++] = *read++;
         }
 
@@ -171,7 +171,7 @@ char* applyDefines(char *str, const char* filename) {
         }
 
         if (!replaced) {
-            if ((write - buffer) + 2 > bufSize) {
+            if ((write - buffer) + (size_t)2 > bufSize) {
                 bufSize *= 2;
                 size_t offset = write - buffer;
                 char *tmp = realloc(buffer, bufSize);

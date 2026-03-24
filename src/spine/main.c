@@ -148,8 +148,6 @@ int main(int argc, char* argv[]) {
     fread(input, sizeof(char), inputSize, inputFile);
     input[inputSize] = '\0';
 
-    // compile steps here
-
     char* output = preprocess(input, inputSize, options.input_file);
 
     // opens output file
