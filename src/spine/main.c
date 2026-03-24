@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "spine/util/log.h"
+#include "spine/preprocessor.h"
 
 typedef struct {
     char* output_file;
@@ -108,7 +109,7 @@ int main(int argc, char* argv[]) {
     parseFlags(argc, argv, &options);
 
     // opens input file
-    FILE* inputFile = fopen(options.input_file, "r");
+    FILE* inputFile = fopen(options.input_file, "rb");
     if (inputFile == NULL) {
         spLogInfo l;
         l.code = SP_MAIN_CANNOT_OPEN_INPUT_FILE;
@@ -143,12 +144,16 @@ int main(int argc, char* argv[]) {
         spEmitLog(l);
     }
 
-    // compile steps & input buffer free here
+    // reads input file
+    fread(input, sizeof(char), inputSize, inputFile);
+    input[inputSize] = '\0';
 
-    char* output = "";
+    // compile steps here
+
+    char* output = preprocess(input, inputSize, options.input_file);
 
     // opens output file
-    FILE* outputFile = fopen(options.output_file, "w");
+    FILE* outputFile = fopen(options.output_file, "wb");
     if (outputFile == NULL) {
         spLogInfo l;
         l.code = SP_MAIN_CANNOT_OPEN_OUTPUT_FILE;
@@ -168,6 +173,7 @@ int main(int argc, char* argv[]) {
     // closes files & free buffers
     fclose(outputFile);
     fclose(inputFile);
+    free(output);
     free(input);
 
     return 0;

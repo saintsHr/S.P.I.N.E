@@ -1,3 +1,3 @@
 #pragma once
 
-char* preprocess(const char* source, const char* filename);
+char* preprocess(const char* source, long srcSize, const char* filename);
