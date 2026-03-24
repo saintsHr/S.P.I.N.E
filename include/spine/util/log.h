@@ -47,12 +47,15 @@ typedef struct {
 } spLogInfo;
 
 typedef enum {
-    SP_MAIN_NO_INPUT_FILE               = 0x0001,
-    SP_MAIN_NO_OUTPUT_FILE              = 0x0002,
-    SP_MAIN_UNKNOWN_FLAG                = 0x0003,
-    SP_MAIN_CANNOT_OPEN_INPUT_FILE      = 0x0004,
-    SP_MAIN_CANNOT_MALLOC_INPUT_BUFFER  = 0x0005,
-    SP_MAIN_CANNOT_OPEN_OUTPUT_FILE     = 0x0006,
+    SP_MAIN_NO_INPUT_FILE               = 0x0000,
+    SP_MAIN_NO_OUTPUT_FILE              = 0x0001,
+    SP_MAIN_UNKNOWN_FLAG                = 0x0002,
+    SP_MAIN_CANNOT_OPEN_INPUT_FILE      = 0x0003,
+    SP_MAIN_CANNOT_MALLOC_INPUT_BUFFER  = 0x0004,
+    SP_MAIN_CANNOT_OPEN_OUTPUT_FILE     = 0x0005,
+
+    SP_PREP_TOO_MANY_DEFINES             = 0x1000,
+    SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER = 0x1001,
 } spErrorCode;
 
 static void spPrintIndented(const char *text) {
