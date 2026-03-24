@@ -32,15 +32,19 @@ void parseDefine(char *line) {
     defineCount++;
 }
 
-void extractDefines(char *str) {
+char* extractDefines(char *str) {
+    size_t size = strlen(str);
+    char *buffer = malloc(size + 1);
+    if (!buffer) return str;
+
     char *read = str;
-    char *write = str;
+    char *write = buffer;
     char line[512];
 
     while (*read) {
         int i = 0;
 
-        while (*read && *read != '\n') {
+        while (*read && *read != '\n' && i < sizeof(line) - 1) {
             line[i++] = *read++;
         }
 
@@ -53,19 +57,23 @@ void extractDefines(char *str) {
         if (strncmp(trim, "define ", 7) == 0) {
             parseDefine(trim);
         } else {
-            strcpy(write, line);
-            write += strlen(line);
+            size_t len = strlen(line);
+            memcpy(write, line, len);
+            write += len;
             *write++ = '\n';
         }
     }
 
     *write = '\0';
+    return buffer;
 }
 
-void applyDefines(char *str) {
+char* applyDefines(char *str) {
     size_t size = strlen(str);
 
     char *buffer = malloc(size + defineCount * MAX_DEFINE_VALUE_LENGHT + 1);
+    if (!buffer) return str;
+
     char *write = buffer;
     char *read = str;
 
@@ -82,8 +90,9 @@ void applyDefines(char *str) {
                 if ((!isalnum(before) && before != '_') &&
                     (!isalnum(after) && after != '_')) {
 
-                    strcpy(write, defines[i].value);
-                    write += strlen(defines[i].value);
+                    size_t vlen = strlen(defines[i].value);
+                    memcpy(write, defines[i].value, vlen);
+                    write += vlen;
                     read += len;
                     replaced = 1;
                     break;
@@ -97,8 +106,8 @@ void applyDefines(char *str) {
     }
 
     *write = '\0';
-    strcpy(str, buffer);
-    free(buffer);
+
+    return buffer;
 }
 
 void removeCarriageReturn(char *str) {
@@ -158,7 +167,7 @@ void removeEmptyLines(char *str) {
 }
 
 char* preprocess(const char* src, long srcSize, const char* filename) {
-    char* out = malloc((srcSize + 1) * sizeof(char));
+    char* out = malloc(srcSize + 1);
     memcpy(out, src, srcSize);
     out[srcSize] = '\0';
 
@@ -167,8 +176,17 @@ char* preprocess(const char* src, long srcSize, const char* filename) {
 
     removeCarriageReturn(out);
     removeComments(out);
-    extractDefines(out);
-    applyDefines(out);
+
+    char *tmp;
+
+    tmp = extractDefines(out);
+    free(out);
+    out = tmp;
+
+    tmp = applyDefines(out);
+    free(out);
+    out = tmp;
+
     removeEmptyLines(out);
 
     return out;
