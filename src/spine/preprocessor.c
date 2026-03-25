@@ -9,16 +9,11 @@
 #define STR2(x) #x
 #define STR(x) STR2(x)
 
-typedef struct {
-    char name[MAX_DEFINE_NAME_LENGTH];
-    char value[MAX_DEFINE_VALUE_LENGTH];
-} SpDefine;
-
-SpDefine defines[MAX_DEFINES];
+spDefine defines[SP_MAX_DEFINES];
 int defineCount = 0;
 
 void parseDefine(char *line, const char* filename) {
-    if (defineCount >= MAX_DEFINES) {
+    if (defineCount >= SP_MAX_DEFINES) {
         spLogInfo l;
         l.code = SP_MAIN_CANNOT_OPEN_OUTPUT_FILE;
         l.col = 0;
@@ -32,15 +27,15 @@ void parseDefine(char *line, const char* filename) {
         return;
     }
 
-    char name[MAX_DEFINE_NAME_LENGTH] = {0};
-    char value[MAX_DEFINE_VALUE_LENGTH] = {0};
+    char name[SP_MAX_DEFINE_NAME_LENGTH] = {0};
+    char value[SP_MAX_DEFINE_VALUE_LENGTH] = {0};
 
     char *p = line + 7;
     while (*p == ' ' || *p == '\t') p++;
 
     char *n = name;
     while (*p && !isspace((unsigned char)*p)) {
-        if ((n - name) < MAX_DEFINE_NAME_LENGTH - 1)
+        if ((n - name) < SP_MAX_DEFINE_NAME_LENGTH - 1)
             *n++ = *p;
         p++;
     }
@@ -48,11 +43,11 @@ void parseDefine(char *line, const char* filename) {
 
     while (*p == ' ' || *p == '\t') p++;
 
-    strncpy(value, p, MAX_DEFINE_VALUE_LENGTH - 1);
-    value[MAX_DEFINE_VALUE_LENGTH - 1] = '\0';
+    strncpy(value, p, SP_MAX_DEFINE_VALUE_LENGTH - 1);
+    value[SP_MAX_DEFINE_VALUE_LENGTH - 1] = '\0';
 
-    strncpy(defines[defineCount].name, name, MAX_DEFINE_NAME_LENGTH);
-    strncpy(defines[defineCount].value, value, MAX_DEFINE_VALUE_LENGTH);
+    strncpy(defines[defineCount].name, name, SP_MAX_DEFINE_NAME_LENGTH);
+    strncpy(defines[defineCount].value, value, SP_MAX_DEFINE_VALUE_LENGTH);
     defineCount++;
 }
 

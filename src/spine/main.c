@@ -3,6 +3,7 @@
 
 #include "spine/util/log.h"
 #include "spine/preprocessor.h"
+#include "spine/lexer.h"
 
 typedef struct {
     char* output_file;
@@ -148,7 +149,10 @@ int main(int argc, char* argv[]) {
     fread(input, sizeof(char), inputSize, inputFile);
     input[inputSize] = '\0';
 
-    char* output = preprocess(input, inputSize, options.input_file);
+    char*    output = "";
+    spToken* tokens = NULL;
+    
+    output = preprocess(input, inputSize, options.input_file);
 
     // opens output file
     FILE* outputFile = fopen(options.output_file, "wb");
