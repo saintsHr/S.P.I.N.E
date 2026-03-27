@@ -12,6 +12,18 @@ typedef struct {
     bool  warnings;
 } CompilerOptions;
 
+void printTokens(spTokenList* list) {
+    for (size_t i = 0; i < list->count; i++) {
+        printf("Token %d: type=%d value=%s (%d:%d)\n",
+            i,
+            list->tokens[i].type,
+            list->tokens[i].value,
+            list->tokens[i].line,
+            list->tokens[i].column
+        );
+    }
+}
+
 void parseFlags(int argc, char* argv[], CompilerOptions* options) {
     for (int i = 1; i < argc; i++) {
         bool hasNext = i + 1 < argc;
@@ -149,10 +161,15 @@ int main(int argc, char* argv[]) {
     fread(input, sizeof(char), inputSize, inputFile);
     input[inputSize] = '\0';
 
-    char*    output = "";
-    spToken* tokens = NULL;
+    char* output = "";
+    spTokenList tokens = {0};
     
     output = preprocess(input, inputSize, options.input_file);
+
+    tokens = tokenize(output, options.output_file);
+
+    // debug
+    printTokens(&tokens);
 
     // opens output file
     FILE* outputFile = fopen(options.output_file, "wb");
