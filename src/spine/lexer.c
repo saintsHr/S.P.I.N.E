@@ -1,8 +1,10 @@
 #include "spine/lexer.h"
+#include "spine/util/log.h"
 
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 void addToken(spTokenList* list, spToken token) {
     if (list->count >= list->capacity) {
@@ -40,14 +42,17 @@ spTokenList tokenize(const char* input, const char* filename) {
 
         // number
         if (isdigit(c)) {
+            int start_i = i;
             spToken tk = {0};
             tk.type = SP_TOKEN_TYPE_NUMBER;
             tk.line = line;
             tk.column = col;
 
             int j = 0;
+            int has_dot = 0;
 
-            while (isdigit(input[i]) || input[i] == '.') {
+            while (isdigit(input[i]) || (input[i] == '.' && !has_dot)) {
+                if (input[i] == '.') has_dot = 1;
                 if (j < SP_MAX_TOKEN_VALUE_SIZE - 1)
                     tk.value[j++] = input[i];
                 i++;
@@ -55,6 +60,12 @@ spTokenList tokenize(const char* input, const char* filename) {
             }
 
             tk.value[j] = '\0';
+
+            if (isalpha(input[i])) {
+                i = start_i;
+                col = tk.column;
+                goto undefined_token;
+            }
 
             addToken(&list, tk);
             continue;
@@ -150,18 +161,48 @@ spTokenList tokenize(const char* input, const char* filename) {
                     tk.type = SP_TOKEN_TYPE_SEMICOLON;
                     break;
                 default:
-                    tk.type = SP_TOKEN_TYPE_UNDEFINED;
+                    goto undefined_token;
                     break;
             }
 
             tk.value[0] = c;
             tk.value[1] = '\0';
-
             addToken(&list, tk);
-
             col++;
             i++;
             continue;
+        }
+
+        // undefined
+        undefined_token:
+        {
+            spToken tk = {0};
+            tk.type = SP_TOKEN_TYPE_UNDEFINED;
+            tk.line = line;
+            tk.column = col;
+
+            int j = 0;
+
+            while (input[i] != '\0' && !isspace(input[i])) {
+                if (j < SP_MAX_TOKEN_VALUE_SIZE - 1) tk.value[j++] = input[i];
+                i++;
+                col++;
+            }
+            
+            tk.value[j] = '\0';
+
+            addToken(&list, tk);
+            
+            spLogInfo l;
+            l.code = SP_LEXER_UNDEFINED_TOKEN;
+            l.col = tk.column;
+            l.line = tk.line;
+            l.file = filename;
+            l.sev = SP_SEV_FATAL;
+            l.title = "Undefined Token";
+            l.desc = "Undefined token in source file (%s).";
+            l.hint = "follow the language grammar.";
+            spEmitLog(l, tk.value);
         }
     }
 

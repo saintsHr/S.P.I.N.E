@@ -56,6 +56,8 @@ typedef enum {
 
     SP_PREP_TOO_MANY_DEFINES             = 0x1000,
     SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER = 0x1001,
+
+    SP_LEXER_UNDEFINED_TOKEN = 0x2000,
 } spErrorCode;
 
 static void spPrintIndented(const char *text) {
