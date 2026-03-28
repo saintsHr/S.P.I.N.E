@@ -4,6 +4,7 @@
 #include "spine/util/log.h"
 #include "spine/preprocessor.h"
 #include "spine/lexer.h"
+#include "spine/ast.h"
 
 typedef struct {
     char* output_file;
@@ -14,7 +15,7 @@ typedef struct {
 
 void printTokens(spTokenList* list) {
     for (size_t i = 0; i < list->count; i++) {
-        printf("Token %d: type=%d value=%s (%d:%d)\n",
+        printf("Token %ld: type=%d value=%s (%d:%d)\n",
             i,
             list->tokens[i].type,
             list->tokens[i].value,
@@ -170,6 +171,29 @@ int main(int argc, char* argv[]) {
 
     // debug
     printTokens(&tokens);
+
+    printf("\n\n");
+
+    spProgramNode* prog = spNewProgram();
+
+    /* a */
+    spASTNode* a_val = (spASTNode*)spNewLiteralF64(3.1415);
+    spASTNode* a_decl = (spASTNode*)spNewVarDecl("a", SP_VAL_TYPE_F32, a_val);
+    spProgramAddStatement(prog, a_decl);
+
+    /* b */
+    spASTNode* b_val = (spASTNode*)spNewLiteralF64(3.1415);
+    spASTNode* b_decl = (spASTNode*)spNewVarDecl("b", SP_VAL_TYPE_F32, b_val);
+    spProgramAddStatement(prog, b_decl);
+
+    /* c = a * b */
+    spASTNode* id_a = (spASTNode*)spNewIdentifier("a");
+    spASTNode* id_b = (spASTNode*)spNewIdentifier("b");
+    spASTNode* mul = (spASTNode*)spNewBinary(id_a, id_b, SP_OP_TYPE_MUL);
+    spASTNode* c_decl = (spASTNode*)spNewVarDecl("c", SP_VAL_TYPE_F32, mul);
+    spProgramAddStatement(prog, c_decl);
+
+    spPrintAST((spASTNode*)prog);
 
     // opens output file
     FILE* outputFile = fopen(options.output_file, "wb");
