@@ -95,24 +95,41 @@ static spASTNode* parse_declaration(spTokenList list, size_t* current, const cha
     spToken nameToken = advance(list, current);
     char* name = nameToken.value;
 
-    // expects =
-    expect(list, current, SP_TOKEN_TYPE_EQUALS, filename);
-
     // gets value
-    spToken valueToken = advance(list, current);
-
     spASTNode* val = NULL;
-    switch(type) {
-        case SP_VAL_TYPE_F32: val = (spASTNode*)spNewLiteralF32((float)atof(valueToken.value)); break;
-        case SP_VAL_TYPE_F64: val = (spASTNode*)spNewLiteralF64((double)atof(valueToken.value)); break;
-        case SP_VAL_TYPE_I8:  val = (spASTNode*)spNewLiteralI8((int8_t)atoi(valueToken.value)); break;
-        case SP_VAL_TYPE_I16: val = (spASTNode*)spNewLiteralI16((int16_t)atoi(valueToken.value)); break;
-        case SP_VAL_TYPE_I32: val = (spASTNode*)spNewLiteralI32((int32_t)atoi(valueToken.value)); break;
-        case SP_VAL_TYPE_I64: val = (spASTNode*)spNewLiteralI64((int64_t)atoll(valueToken.value)); break;
-        case SP_VAL_TYPE_U8:  val = (spASTNode*)spNewLiteralU8((uint8_t)atoi(valueToken.value)); break;
-        case SP_VAL_TYPE_U16: val = (spASTNode*)spNewLiteralU16((uint16_t)atoi(valueToken.value)); break;
-        case SP_VAL_TYPE_U32: val = (spASTNode*)spNewLiteralU32((uint32_t)atoi(valueToken.value)); break;
-        case SP_VAL_TYPE_U64: val = (spASTNode*)spNewLiteralU64((uint64_t)atoll(valueToken.value)); break;
+
+    if (match(list, current, SP_TOKEN_TYPE_EQUALS)) {
+        spToken valueToken = advance(list, current);
+        switch(type) {
+            case SP_VAL_TYPE_F32: val = (spASTNode*)spNewLiteralF32((float) atof(valueToken.value)); break;
+            case SP_VAL_TYPE_F64: val = (spASTNode*)spNewLiteralF64((double)atof(valueToken.value)); break;
+
+            case SP_VAL_TYPE_I8:  val = (spASTNode*)spNewLiteralI8 ((int8_t) strtoll(valueToken.value, NULL, 10)); break;
+            case SP_VAL_TYPE_I16: val = (spASTNode*)spNewLiteralI16((int16_t)strtoll(valueToken.value, NULL, 10)); break;
+            case SP_VAL_TYPE_I32: val = (spASTNode*)spNewLiteralI32((int32_t)strtoll(valueToken.value, NULL, 10)); break;
+            case SP_VAL_TYPE_I64: val = (spASTNode*)spNewLiteralI64((int64_t)strtoll(valueToken.value, NULL, 10)); break;
+
+            case SP_VAL_TYPE_U8:  val = (spASTNode*)spNewLiteralU8 ((uint8_t) strtoull(valueToken.value, NULL, 10)); break;
+            case SP_VAL_TYPE_U16: val = (spASTNode*)spNewLiteralU16((uint16_t)strtoull(valueToken.value, NULL, 10)); break;
+            case SP_VAL_TYPE_U32: val = (spASTNode*)spNewLiteralU32((uint32_t)strtoull(valueToken.value, NULL, 10)); break;
+            case SP_VAL_TYPE_U64: val = (spASTNode*)spNewLiteralU64((uint64_t)strtoull(valueToken.value, NULL, 10)); break;
+        }
+    } else {
+        // defaults
+        switch(type) {
+            case SP_VAL_TYPE_F32: val = (spASTNode*)spNewLiteralF32(0.0f); break;
+            case SP_VAL_TYPE_F64: val = (spASTNode*)spNewLiteralF64(0.0);  break;
+
+            case SP_VAL_TYPE_I8:  val = (spASTNode*)spNewLiteralI8 (0);    break;
+            case SP_VAL_TYPE_I16: val = (spASTNode*)spNewLiteralI16(0);    break;
+            case SP_VAL_TYPE_I32: val = (spASTNode*)spNewLiteralI32(0);    break;
+            case SP_VAL_TYPE_I64: val = (spASTNode*)spNewLiteralI64(0);    break;
+
+            case SP_VAL_TYPE_U8:  val = (spASTNode*)spNewLiteralU8 (0);    break;
+            case SP_VAL_TYPE_U16: val = (spASTNode*)spNewLiteralU16(0);    break;
+            case SP_VAL_TYPE_U32: val = (spASTNode*)spNewLiteralU32(0);    break;
+            case SP_VAL_TYPE_U64: val = (spASTNode*)spNewLiteralU64(0);    break;
+        }
     }
 
     // expect ;
