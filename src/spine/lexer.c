@@ -49,10 +49,10 @@ spTokenList tokenize(const char* input, const char* filename) {
             tk.column = col;
 
             int j = 0;
-            int has_dot = 0;
+            bool has_dot = false;
 
             while (isdigit(input[i]) || (input[i] == '.' && !has_dot)) {
-                if (input[i] == '.') has_dot = 1;
+                if (input[i] == '.') has_dot = true;
                 if (j < SP_MAX_TOKEN_VALUE_SIZE - 1)
                     tk.value[j++] = input[i];
                 i++;

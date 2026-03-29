@@ -5,6 +5,7 @@
 #include "spine/preprocessor.h"
 #include "spine/lexer.h"
 #include "spine/ast.h"
+#include "spine/parser.h"
 
 typedef struct {
     char* output_file;
@@ -162,11 +163,20 @@ int main(int argc, char* argv[]) {
     fread(input, sizeof(char), inputSize, inputFile);
     input[inputSize] = '\0';
 
-    char* output = "";
+    char* output = NULL;
     spTokenList tokens = {0};
+    spASTNode* ast = NULL;
     
     output = preprocess(input, inputSize, options.input_file);
     tokens = tokenize(output, options.output_file);
+    ast    = (spASTNode*)parse(tokens, options.input_file);
+
+    // debug
+    printTokens(&tokens);
+
+    printf("\n\n");
+
+    spPrintAST(ast);
 
     // opens output file
     FILE* outputFile = fopen(options.output_file, "wb");
