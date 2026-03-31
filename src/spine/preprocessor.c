@@ -15,7 +15,7 @@ int defineCount = 0;
 void parseDefine(char *line, const char* filename) {
     if (defineCount >= SP_MAX_DEFINES) {
         spLogInfo l;
-        l.code = SP_MAIN_CANNOT_OPEN_OUTPUT_FILE;
+        l.code = SP_PREP_TOO_MANY_DEFINES;
         l.col = 0;
         l.line = 0;
         l.file = filename;

@@ -47,12 +47,11 @@ typedef struct {
 } spLogInfo;
 
 typedef enum {
-    SP_MAIN_NO_INPUT_FILE               = 0x0000,
-    SP_MAIN_NO_OUTPUT_FILE              = 0x0001,
-    SP_MAIN_UNKNOWN_FLAG                = 0x0002,
-    SP_MAIN_CANNOT_OPEN_INPUT_FILE      = 0x0003,
-    SP_MAIN_CANNOT_MALLOC_INPUT_BUFFER  = 0x0004,
-    SP_MAIN_CANNOT_OPEN_OUTPUT_FILE     = 0x0005,
+    SP_MAIN_NO_INPUT_FILE             = 0x0000,
+    SP_MAIN_NO_OUTPUT_FILE            = 0x0001,
+    SP_MAIN_UNKNOWN_FLAG              = 0x0002,
+    SP_MAIN_CANNOT_OPEN_FILE          = 0x0003,
+    SP_MAIN_CANNOT_MALLOC_FILE_BUFFER = 0x0004,
 
     SP_PREP_TOO_MANY_DEFINES             = 0x1000,
     SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER = 0x1001,
@@ -77,7 +76,7 @@ static void spPrintIndented(const char *text) {
     }
 }
 
-static void spEmitLog(spLogInfo info, ...) {
+static void spEmitLogV(spLogInfo info, va_list args) {
     printf("\n");
 
     const char *sevStr = "";
@@ -88,40 +87,33 @@ static void spEmitLog(spLogInfo info, ...) {
         case SP_SEV_FATAL:   sevStr = SP_COLOR_RED      "FATAL"   SP_COLOR_RESET; break;
     }
 
-    char titleBuffer[1024];
-    char descBuffer[1024];
-    char hintBuffer[1024];
+    char titleBuffer[1024] = {0};
+    char descBuffer[1024]  = {0};
+    char hintBuffer[1024]  = {0};
 
-    va_list args;
-    va_start(args, info);
+    if (info.title) {
+        va_list copy;
+        va_copy(copy, args);
+        vsnprintf(titleBuffer, sizeof(titleBuffer), info.title, copy);
+        va_end(copy);
+    }
 
-    va_list args_copy1;
-    va_copy(args_copy1, args);
-    vsnprintf(titleBuffer, sizeof(titleBuffer), info.title, args_copy1);
-    va_end(args_copy1);
+    if (info.desc) {
+        va_list copy;
+        va_copy(copy, args);
+        vsnprintf(descBuffer, sizeof(descBuffer), info.desc, copy);
+        va_end(copy);
+    }
 
-    va_list args_copy2;
-    va_copy(args_copy2, args);
-    vsnprintf(descBuffer, sizeof(descBuffer), info.desc, args_copy2);
-    va_end(args_copy2);
+    if (info.hint) {
+        va_list copy;
+        va_copy(copy, args);
+        vsnprintf(hintBuffer, sizeof(hintBuffer), info.hint, copy);
+        va_end(copy);
+    }
 
-    va_list args_copy3;
-    va_copy(args_copy3, args);
-    if (info.hint)
-        vsnprintf(hintBuffer, sizeof(hintBuffer), info.hint, args_copy3);
-    va_end(args_copy3);
-
-    va_end(args);
-
-    printf(
-        "[%s][%s][%d:%d][0x%04x]: %s\n\n",
-        sevStr,
-        info.file,
-        info.line,
-        info.col,
-        info.code,
-        titleBuffer
-    );
+    printf("[%s][%s][%d:%d][0x%04x]: %s\n\n",
+        sevStr, info.file, info.line, info.col, info.code, titleBuffer);
 
     printf(SP_COLOR_BBLUE " Desc:\n" SP_COLOR_RESET);
     spPrintIndented(descBuffer);
@@ -134,4 +126,39 @@ static void spEmitLog(spLogInfo info, ...) {
     }
 
     if (info.sev == SP_SEV_FATAL) exit(EXIT_FAILURE);
+}
+
+static void spEmitLog(spLogInfo info, ...) {
+    va_list args;
+    va_start(args, info);
+    spEmitLogV(info, args);
+    va_end(args);
+}
+
+static void spEmitLogHelper(
+    spSeverity sev,
+    const char* file,
+    int line,
+    int col,
+    uint16_t code,
+    const char* title,
+    const char* desc,
+    const char* hint,
+    ...
+) {
+    spLogInfo l = {
+        .code  = code,
+        .col   = col,
+        .line  = line,
+        .file  = file,
+        .title = title,
+        .desc  = desc,
+        .hint  = hint,
+        .sev   = sev
+    };
+
+    va_list args;
+    va_start(args, hint);
+    spEmitLogV(l, args);
+    va_end(args);
 }

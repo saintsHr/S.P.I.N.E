@@ -102,7 +102,7 @@ static void spPrintASTNode(spASTNode* node, int indent) {
             switch (lit->value_type) {
                 case SP_VAL_TYPE_F32:
                 case SP_VAL_TYPE_F64:
-                    printf("%f\n", lit->f64);
+                    printf("%.20f\n", lit->f64);
                     break;
 
                 case SP_VAL_TYPE_I8:
