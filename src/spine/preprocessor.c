@@ -263,7 +263,21 @@ static inline void removeEmptyLines(char* str) {
 char* preprocess(const char* src, long srcSize, const char* filename) {
     spPreprocessorContext ctx = {0};
 
+    // --- allocates memory for preprocessor ---
     char* out = malloc(srcSize + 1);
+    if (!out) {
+        spEmitLogHelper(
+            SP_SEV_FATAL,
+            "N/A",
+            0,
+            0,
+            SP_PREP_CANNOT_MALLOC_OUTPUT,
+            "Memory allocation failed",
+            "Preprocessor output memory allocation failed.",
+            "Make sure you have enough memory and try again."
+        );
+    }
+
     memcpy(out, src, srcSize);
     out[srcSize] = '\0';
 
@@ -272,10 +286,12 @@ char* preprocess(const char* src, long srcSize, const char* filename) {
 
     char* tmp;
 
+    // --- extracts defines ---
     tmp = extractDefines(&ctx, out, filename);
     free(out);
     out = tmp;
 
+    // --- applyes defines ---
     tmp = applyDefines(&ctx, out, filename);
     free(out);
     out = tmp;
