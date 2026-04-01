@@ -9,83 +9,135 @@
 #define STR2(x) #x
 #define STR(x) STR2(x)
 
-spDefine defines[SP_MAX_DEFINES];
-int defineCount = 0;
+#define DEFINE_KEYWORD "define"
 
-void parseDefine(char *line, const char* filename) {
-    if (defineCount >= SP_MAX_DEFINES) {
-        spLogInfo l;
-        l.code = SP_PREP_TOO_MANY_DEFINES;
-        l.col = 0;
-        l.line = 0;
-        l.file = filename;
-        l.title = "Too many defines";
-        l.desc = "file provided (%s) has too many defines";
-        l.hint = "Remove useless defines.";
-        l.sev = SP_SEV_FATAL;
-        spEmitLog(l, filename);
+typedef struct {
+    spDefine defines[SP_MAX_DEFINES];
+    int defineCount;
+} spPreprocessorContext;
+
+static inline int isIdentifierChar(char c) {
+    return isalnum((unsigned char)c) || c == '_';
+}
+
+static inline char* skipWhitespace(char* p) {
+    while (isspace((unsigned char)*p)) p++;
+    return p;
+}
+
+static void ensureCapacity(
+    char** buffer,
+    char** write,
+    size_t* bufSize,
+    size_t needed,
+    const char* filename
+) {
+    size_t used = *write - *buffer;
+
+    if (used + needed + 1 > *bufSize) {
+        *bufSize = (*bufSize * 2) + needed;
+
+        char* tmp = realloc(*buffer, *bufSize);
+        if (!tmp) {
+            spEmitLogHelper(
+                SP_SEV_FATAL,
+                filename,
+                0,
+                0,
+                SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER,
+                "Memory allocation failed",
+                "Cannot realloc memory for defines buffer.",
+                "Make sure you have enough memory and try again."
+            );
+            free(*buffer);
+            return;
+        }
+
+        *buffer = tmp;
+        *write  = *buffer + used;
+    }
+}
+
+static void parseDefine(spPreprocessorContext* ctx, char* line, const char* filename) {
+    if (ctx->defineCount >= SP_MAX_DEFINES) {
+        spEmitLogHelper(
+            SP_SEV_FATAL,
+            filename,
+            0,
+            0,
+            SP_PREP_TOO_MANY_DEFINES,
+            "Too many defines",
+            "file provided (%s) has too many defines",
+            "Remove useless defines.",
+            filename
+        );
         return;
     }
 
-    char name[SP_MAX_DEFINE_NAME_LENGTH] = {0};
+    char name [SP_MAX_DEFINE_NAME_LENGTH]  = {0};
     char value[SP_MAX_DEFINE_VALUE_LENGTH] = {0};
 
-    char *p = line + 7;
-    while (*p == ' ' || *p == '\t') p++;
+    char* p = line + strlen(DEFINE_KEYWORD);
+    p = skipWhitespace(p);
 
-    char *n = name;
+    char* n = name;
     while (*p && !isspace((unsigned char)*p)) {
-        if ((n - name) < SP_MAX_DEFINE_NAME_LENGTH - 1)
-            *n++ = *p;
+        if ((size_t)(n - name) < SP_MAX_DEFINE_NAME_LENGTH - 1) *n++ = *p;
         p++;
     }
     *n = '\0';
 
-    while (*p == ' ' || *p == '\t') p++;
+    p = skipWhitespace(p);
 
-    strncpy(value, p, SP_MAX_DEFINE_VALUE_LENGTH - 1);
-    value[SP_MAX_DEFINE_VALUE_LENGTH - 1] = '\0';
+    snprintf(value, sizeof(value), "%s", p);
 
-    strncpy(defines[defineCount].name, name, SP_MAX_DEFINE_NAME_LENGTH);
-    strncpy(defines[defineCount].value, value, SP_MAX_DEFINE_VALUE_LENGTH);
-    defineCount++;
+    spDefine* def = &ctx->defines[ctx->defineCount];
+
+    snprintf(def->name, SP_MAX_DEFINE_NAME_LENGTH, "%s", name);
+    snprintf(def->value, SP_MAX_DEFINE_VALUE_LENGTH, "%s", value);
+
+    def->nameLen  = strlen(def->name);
+    def->valueLen = strlen(def->value);
+
+    ctx->defineCount++;
 }
 
-char* extractDefines(char *str, const char* filename) {
-    size_t size = strlen(str);
-    char *buffer = malloc(size + 1);
+static char* extractDefines(spPreprocessorContext* ctx, char* str, const char* filename) {
+    size_t size   = strlen(str);
+    char*  buffer = malloc(size + 1);
+
     if (!buffer) {
-        spLogInfo l;
-        l.code = SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER;
-        l.col = 0;
-        l.line = 0;
-        l.file = filename;
-        l.title = "Memory allocation failed";
-        l.desc = "Cannot allocate memory for defines buffer.";
-        l.hint = "Make sure you have enough memory and try again.";
-        l.sev = SP_SEV_FATAL;
-        spEmitLog(l);
+        spEmitLogHelper(
+            SP_SEV_FATAL,
+            filename,
+            0,
+            0,
+            SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER,
+            "Memory allocation failed",
+            "Cannot allocate memory for defines buffer.",
+            "Make sure you have enough memory and try again."
+        );
+        return NULL;
     }
 
-    char *read  = str;
-    char *write = buffer;
-    char line[512];
+    char* read      = str;
+    char* write     = buffer;
+    char  line[512] = {};
+
+    const size_t keywordLen = strlen(DEFINE_KEYWORD);
 
     while (*read) {
-        int i = 0;
-
-        while (*read && *read != '\n' && (unsigned)i < sizeof(line) - 1) {
-            line[i++] = *read++;
-        }
-
+        size_t i = 0;
+        while (*read && *read != '\n' && i < sizeof(line) - 1) line[i++] = *read++;
         line[i] = '\0';
+
         if (*read == '\n') read++;
 
-        char *trim = line;
-        while (*trim == ' ' || *trim == '\t') trim++;
+        char* trim = skipWhitespace(line);
 
-        if (strncmp(trim, "define ", 7) == 0) {
-            parseDefine(trim, filename);
+        if (strncmp(trim, DEFINE_KEYWORD, keywordLen) == 0 &&
+            isspace((unsigned char)trim[keywordLen])) {
+            parseDefine(ctx, trim, filename);
         } else {
             size_t len = strlen(line);
             memcpy(write, line, len);
@@ -98,94 +150,54 @@ char* extractDefines(char *str, const char* filename) {
     return buffer;
 }
 
-char* applyDefines(char *str, const char* filename) {
+static char* applyDefines(spPreprocessorContext* ctx, char* str, const char* filename) {
     if (!str) return NULL;
 
     size_t bufSize = strlen(str) + 128;
-    char *buffer = malloc(bufSize);
+    char* buffer = malloc(bufSize);
+
     if (!buffer) {
-        spLogInfo l;
-        l.code = SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER;
-        l.col = 0;
-        l.line = 0;
-        l.file = filename;
-        l.title = "Memory allocation failed";
-        l.desc = "Cannot allocate memory for defines buffer.";
-        l.hint = "Make sure you have enough memory and try again.";
-        l.sev = SP_SEV_FATAL;
-        spEmitLog(l);
+        spEmitLogHelper(
+            SP_SEV_FATAL,
+            filename,
+            0,
+            0,
+            SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER,
+            "Memory allocation failed",
+            "Cannot allocate memory for defines buffer.",
+            "Make sure you have enough memory and try again."
+        );
+        return NULL;
     }
 
-    char *write = buffer;
-    char *read = str;
+    char* read  = str;
+    char* write = buffer;
 
     while (*read) {
         int replaced = 0;
 
-        for (int i = 0; i < defineCount; i++) {
-            int len = strlen(defines[i].name);
+        for (int i = 0; i < ctx->defineCount; i++) {
+            spDefine* def = &ctx->defines[i];
 
-            if (strncmp(read, defines[i].name, len) == 0) {
-                char before = (read == str) ? ' ' : read[-1];
-                char after  = read[len];
+            if (strncmp(read, def->name, def->nameLen) != 0) continue;
 
-                if ((!isalnum((unsigned char)before) && before != '_') &&
-                    (!isalnum((unsigned char)after) && after != '_')) {
+            char before = (read == str) ? ' ' : read[-1];
+            char after  = read[def->nameLen];
 
-                    size_t vlen = strlen(defines[i].value);
+            if (!isIdentifierChar(before) && !isIdentifierChar(after)) {
+                ensureCapacity(&buffer, &write, &bufSize, def->valueLen, filename);
 
-                    // garante espaço suficiente
-                    if ((write - buffer) + vlen + 1 > bufSize) {
-                        bufSize = (bufSize * 2) + vlen;
-                        size_t offset = write - buffer;
-                        char *tmp = realloc(buffer, bufSize);
-                        if (!tmp) {
-                            spLogInfo l;
-                            l.code = SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER;
-                            l.col = 0;
-                            l.line = 0;
-                            l.file = filename;
-                            l.title = "Memory allocation failed";
-                            l.desc = "Cannot realloc memory for defines buffer.";
-                            l.hint = "Make sure you have enough memory and try again.";
-                            l.sev = SP_SEV_FATAL;
-                            free(buffer);
-                            spEmitLog(l);
-                        }
-                        buffer = tmp;
-                        write = buffer + offset;
-                    }
+                memcpy(write, def->value, def->valueLen);
+                write += def->valueLen;
+                read  += def->nameLen;
 
-                    memcpy(write, defines[i].value, vlen);
-                    write += vlen;
-                    read += len;
-                    replaced = 1;
-                    break;
-                }
+                replaced = 1;
+                break;
             }
         }
 
         if (!replaced) {
-            if ((write - buffer) + (size_t)2 > bufSize) {
-                bufSize *= 2;
-                size_t offset = write - buffer;
-                char *tmp = realloc(buffer, bufSize);
-                if (!tmp) {
-                    spLogInfo l;
-                    l.code = SP_PREP_CANNOT_MALLOC_DEFINES_BUFFER;
-                    l.col = 0;
-                    l.line = 0;
-                    l.file = filename;
-                    l.title = "Memory allocation failed";
-                    l.desc = "Cannot realloc memory for defines buffer.";
-                    l.hint = "Make sure you have enough memory and try again.";
-                    l.sev = SP_SEV_FATAL;
-                    free(buffer);
-                    spEmitLog(l);
-                }
-                buffer = tmp;
-                write = buffer + offset;
-            }
+            ensureCapacity(&buffer, &write, &bufSize, 1, filename);
             *write++ = *read++;
         }
     }
@@ -194,9 +206,9 @@ char* applyDefines(char *str, const char* filename) {
     return buffer;
 }
 
-void removeCarriageReturn(char *str) {
-    char *read = str;
-    char *write = str;
+static inline void removeCarriageReturn(char* str) {
+    char* read = str;
+    char* write = str;
 
     while (*read) {
         if (*read != '\r') *write++ = *read;
@@ -206,31 +218,29 @@ void removeCarriageReturn(char *str) {
     *write = '\0';
 }
 
-void removeComments(char* str) {
-    char *read = str;
-    char *write = str;
+static inline void removeComments(char* str) {
+    char* read  = str;
+    char* write = str;
 
     while (*read) {
         if (*read == '/' && *(read + 1) == '/') {
             while (*read && *read != '\n') read++;
         } else {
-            *write = *read;
-            write++;
-            read++;
+            *write++ = *read++;
         }
     }
 
     *write = '\0';
 }
 
-void removeEmptyLines(char *str) {
-    char *read = str;
-    char *write = str;
+static inline void removeEmptyLines(char* str) {
+    char* read = str;
+    char* write = str;
 
     while (*read) {
-        char *lineStart = read;
+        char* lineStart = read;
 
-        while (*read == ' ' || *read == '\t') read++;
+        while (isspace((unsigned char)*read) && *read != '\n') read++;
 
         if (*read == '\n') {
             read++;
@@ -251,23 +261,22 @@ void removeEmptyLines(char *str) {
 }
 
 char* preprocess(const char* src, long srcSize, const char* filename) {
+    spPreprocessorContext ctx = {0};
+
     char* out = malloc(srcSize + 1);
     memcpy(out, src, srcSize);
     out[srcSize] = '\0';
 
-    memset(defines, 0, sizeof(defines));
-    defineCount = 0;
-
     removeCarriageReturn(out);
     removeComments(out);
 
-    char *tmp;
+    char* tmp;
 
-    tmp = extractDefines(out, filename);
+    tmp = extractDefines(&ctx, out, filename);
     free(out);
     out = tmp;
 
-    tmp = applyDefines(out, filename);
+    tmp = applyDefines(&ctx, out, filename);
     free(out);
     out = tmp;
 
